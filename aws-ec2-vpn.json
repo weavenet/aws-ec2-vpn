@@ -1,0 +1,430 @@
+{
+  "Description": "This template creates a VPC, Subnets and an Auto Scaling Group of one which launches an Ubuntu instance. The instance configures a VPN server and assign's itself an Elastic IP.",
+  "Parameters": {
+    "AvailabilityZone": {
+      "Type": "AWS::EC2::AvailabilityZone::Name",
+      "Description": "The name of the availability zone for the public subnet."
+    },
+    "VpnUserName": {
+      "Type": "String",
+      "Description": "VPN Username"
+    },
+    "VpnPassword": {
+      "Type": "String",
+      "Description": "VPN Password",
+      "NoEcho": true
+    },
+    "VpnPreSharedKey": {
+      "Type": "String",
+      "Description": "VPN Pre Shared Key",
+      "NoEcho": true
+    }
+  },
+  "Mappings": {
+    "AMIMap" : {
+      "us-west-2" : { "id" : "ami-5189a661" }
+    }
+  },
+  "Resources": {
+    "Vpc": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.1.0.0/16",
+        "EnableDnsHostnames": true,
+        "EnableDnsSupport": true,
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Ref": "AWS::StackName"
+            }
+          }
+        ]
+      }
+    },
+    "InternetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "DependsOn": "Vpc",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Ref": "AWS::StackName"
+            }
+          }
+        ]
+      }
+    },
+    "RouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "DependsOn": "Vpc",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Ref": "AWS::StackName"
+            }
+          }
+        ]
+      }
+    },
+    "Route": {
+      "Type": "AWS::EC2::Route",
+      "DependsOn": ["AttachGateway", "RouteTable"],
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "InternetGateway"
+        },
+        "RouteTableId": {
+          "Ref": "RouteTable"
+        }
+      }
+    },
+    "AttachGateway": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "DependsOn": "Vpc",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "InternetGatewayId": {
+          "Ref": "InternetGateway"
+        }
+      }
+    },
+    "DhcpOptions": {
+      "Type": "AWS::EC2::DHCPOptions",
+      "Properties": {
+        "DomainNameServers": [
+          "AmazonProvidedDNS"
+        ]
+      }
+    },
+    "VPCDhcpOptionsAssociation": {
+      "Type": "AWS::EC2::VPCDHCPOptionsAssociation",
+      "DependsOn": [
+        "Vpc",
+        "DhcpOptions"
+      ],
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "DhcpOptionsId": {
+          "Ref": "DhcpOptions"
+        }
+      }
+    },
+    "PublicSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "DependsOn": "Vpc",
+      "Properties": {
+        "MapPublicIpOnLaunch": true,
+        "AvailabilityZone": {
+          "Ref": "AvailabilityZone"
+        },
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "CidrBlock": "10.1.1.0/24",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Ref": "AWS::StackName"
+            }
+          }
+        ]
+      }
+    },
+    "SubnetRouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "DependsOn": "PublicSubnet",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "RouteTable"
+        },
+        "SubnetId": {
+          "Ref": "PublicSubnet"
+        }
+      }
+    },
+    "EIP" : {
+       "Type" : "AWS::EC2::EIP",
+       "Properties" : {
+         "Domain" : { "Ref" : "Vpc" }
+       }
+     },
+    "IAMRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path": "/"
+      }
+    },
+    "IAMPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "InstancePolicy",
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "ec2:AssociateAddress"
+              ],
+              "Resource": "*"
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "IAMRole"
+          }
+        ]
+      }
+    },
+    "IAMProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": "/",
+        "Roles": [
+          {
+            "Ref": "IAMRole"
+          }
+        ]
+      }
+    },
+    "VpnInstancesSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Security Group for the VPN instance",
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "500",
+            "ToPort": "500",
+            "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "IpProtocol": "udp",
+            "FromPort": "500",
+            "ToPort": "500",
+            "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "IpProtocol": "udp",
+            "FromPort": "4500",
+            "ToPort": "4500",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ]
+      }
+    },
+    "VpnInstances": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "VPCZoneIdentifier": [
+          {
+            "Ref": "PublicSubnet"
+          }
+        ],
+        "LaunchConfigurationName": {
+          "Ref": "VpnInstanceLaunchConfig"
+        },
+        "DesiredCapacity": "1",
+        "MinSize": "0",
+        "MaxSize": "1",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "VPNInstance",
+            "PropagateAtLaunch": true
+          }
+        ]
+      }
+    },
+    "VpnInstanceLaunchConfig": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "IamInstanceProfile": {
+          "Ref": "IAMProfile"
+        },
+        "ImageId": { "Fn::FindInMap" : [ "AMIMap", { "Ref" : "AWS::Region" }, "id"] },
+        "InstanceType": "t2.nano",
+        "SecurityGroups": [
+          {
+            "Fn::GetAtt": [
+              "VpnInstancesSecurityGroup",
+              "GroupId"
+            ]
+          }
+        ],
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [
+              "\n",
+              [
+                "#!/bin/bash",
+
+                "apt-get update --fix-missing",
+                "apt-get install -q -y jq openswan python-pip xl2tpd",
+
+                "set -e",
+
+                { "Fn::Sub": [ "ALLOCATION_ID=${AllocationId}", { "AllocationId": { "Fn::GetAtt": [ "EIP", "AllocationId" ]}}]},
+                { "Fn::Sub": [ "IPSEC_PSK=${VpnPreSharedKey}", { "VpnPreSharedKey": { "Ref": "VpnPreSharedKey" }}]}, 
+                { "Fn::Sub": [ "PUBLIC_IP=${EIP}", { "EIP": { "Ref": "EIP" }}]},
+                { "Fn::Sub": [ "VPN_USER=${VpnUserName}", { "VpnUserName": { "Ref": "VpnUserName" }}]},
+                { "Fn::Sub": [ "VPN_PASSWORD=${VpnPassword}", { "VpnPassword": { "Ref": "VpnPassword" }}]},
+                "INSTANCE_ID=`wget -q -O - 'http://169.254.169.254/latest/meta-data/instance-id'`",
+                "PRIVATE_IP=`wget -q -O - 'http://169.254.169.254/latest/meta-data/local-ipv4'`",
+
+                "pip install awscli",
+                "/usr/local/bin/aws configure set default.s3.signature_version s3v4",
+
+                "cat > /etc/ipsec.conf <<EOF",
+                "version 2.0",
+                "config setup",
+                "  dumpdir=/var/run/pluto/",
+                "  nat_traversal=yes",
+                "  virtual_private=%v4:10.0.0.0/8,%v4:192.168.0.0/16,%v4:172.16.0.0/12,%v4:25.0.0.0/8,%v6:fd00::/8,%v6:fe80::/10",
+                "  oe=off",
+                "  protostack=netkey",
+                "  nhelpers=0",
+                "  interfaces=%defaultroute",
+                "conn vpnpsk",
+                "  auto=add",
+                "  left=$PRIVATE_IP",
+                "  leftid=$PUBLIC_IP",
+                "  leftsubnet=$PRIVATE_IP/32",
+                "  leftnexthop=%defaultroute",
+                "  leftprotoport=17/1701",
+                "  rightprotoport=17/%any",
+                "  right=%any",
+                "  rightsubnetwithin=0.0.0.0/0",
+                "  forceencaps=yes",
+                "  authby=secret",
+                "  pfs=no",
+                "  type=transport",
+                "  auth=esp",
+                "  ike=3des-sha1",
+                "  phase2alg=3des-sha1",
+                "  dpddelay=30",
+                "  dpdtimeout=86400",
+                "  dpdaction=clear",
+                "EOF",
+
+                "cat > /etc/ipsec.secrets <<EOF",
+                "$PUBLIC_IP  %any  : PSK '$IPSEC_PSK'",
+                "EOF",
+
+                "cat > /etc/xl2tpd/xl2tpd.conf <<EOF",
+                "[global]",
+                "port = 1701",
+                "[lns default]",
+                "ip range = 192.168.42.10-192.168.42.250",
+                "local ip = 192.168.42.1",
+                "require chap = yes",
+                "refuse pap = yes",
+                "require authentication = yes",
+                "name = l2tpd",
+                "pppoptfile = /etc/ppp/options.xl2tpd",
+                "length bit = yes",
+                "EOF",
+
+                "cat > /etc/ppp/options.xl2tpd <<EOF",
+                "ipcp-accept-local",
+                "ipcp-accept-remote",
+                "ms-dns 8.8.8.8",
+                "ms-dns 8.8.4.4",
+                "noccp",
+                "auth",
+                "crtscts",
+                "idle 1800",
+                "mtu 1280",
+                "mru 1280",
+                "lock",
+                "connect-delay 5000",
+                "EOF",
+                "cat > /etc/ppp/chap-secrets <<EOF",
+                "$VPN_USER       l2tpd   $VPN_PASSWORD   *",
+                "EOF",
+
+                "iptables -t nat -A POSTROUTING -s 192.168.42.0/24 -o eth0 -j MASQUERADE",
+                "echo 1 > /proc/sys/net/ipv4/ip_forward",
+                "iptables-save > /etc/iptables.rules",
+
+                "cat > /etc/network/if-pre-up.d/iptablesload <<EOF",
+                "iptables-restore < /etc/iptables.rules",
+                "exit 0",
+                "EOF",
+
+                "chmod a+x /etc/network/if-pre-up.d/iptablesload",
+
+                { "Fn::Sub": [ "aws ec2 associate-address --instance-id $INSTANCE_ID --allocation-id $ALLOCATION_ID --region ${Region}", { "Region": { "Ref": "AWS::Region" }}]},
+
+                "/etc/init.d/ipsec restart",
+                "/etc/init.d/xl2tpd restart",
+                "update-rc.d ipsec defaults",
+                "update-rc.d xl2tpd defaults",
+
+                "echo { \\\"Status\\\": \\\"SUCCESS\\\", \\\"Reason\\\": \\\"complete\\\", \\\"UniqueId\\\": \\\"1234\\\", \\\"Data\\\": \\\"complete\\\" } > /root/status.json",
+                { "Fn::Sub": ["curl -T /root/status.json '${WaitHandle}'", { "WaitHandle": { "Ref": "WaitHandle" } }] }
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "WaitHandle": {
+      "Type": "AWS::CloudFormation::WaitConditionHandle",
+      "Properties": {}
+    },
+    "WaitCondition": {
+      "Type": "AWS::CloudFormation::WaitCondition",
+      "DependsOn": [
+        "VpnInstanceLaunchConfig",
+        "VpnInstances"
+      ],
+      "Properties": {
+        "Handle": {
+          "Ref": "WaitHandle"
+        },
+        "Count": "1",
+        "Timeout": "900"
+      }
+    }
+  },
+  "Outputs" : {
+    "IP": {
+      "Value": {
+        "Ref": "EIP"
+      },
+      "Description": "Elastic IP of VPN Instance."
+    }
+  }
+}
