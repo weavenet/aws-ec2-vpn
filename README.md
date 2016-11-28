@@ -74,6 +74,8 @@ Click on **Connect** to connect to the VPN.
 
 Ensure your traffic coming from the VPN IP via [What Is My IP](https://www.google.com/#q=what+is+my+ip).
 
+![image6](https://raw.githubusercontent.com/weavenet/aws-ec2-vpn/master/images/image6.png)
+
 ## Costs
 
 The only charge will be for the EC2 instance hours, currently set to t2.nano, and network bandwidth.
