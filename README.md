@@ -2,6 +2,8 @@
 
 Set up a VPN server on an AWS EC2 Instance via a single, self contained, Cloud Formation template.
 
+See [aws-ec2-vpn.json](https://github.com/weavenet/aws-ec2-vpn/blob/master/aws-ec2-vpn.json) for raw template.
+
 # Setup via AWS Console
 
 Follow the [AWS Cloud Formation Guide](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-console-create-stack.html)
