@@ -4,20 +4,16 @@ Set up a VPN server on an AWS EC2 Instance via a single, self contained, Cloud F
 
 See [aws-ec2-vpn.json](https://github.com/weavenet/aws-ec2-vpn/blob/master/aws-ec2-vpn.json) for raw template.
 
-# Setup via AWS Console
+## Setup via AWS Console
 
 Follow the [AWS Cloud Formation Guide](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-console-create-stack.html)
 to create a new Cloud Formation Stack from the [aws-ec2-vpn.json](https://github.com/weavenet/aws-ec2-vpn/blob/master/aws-ec2-vpn.json) template.
 
-# Setup via CLI
-
-## Pre-reqs
+## Setup via CLI
 
 You must have the [aws-cli](https://aws.amazon.com/cli/) as well as [jq](https://stedolan.github.io/jq/) installed and available in your path.
 
 Additionally, you must set your default AWS credentials to a user with permissions to setup a VPC and launch EC2 instances.
-
-## Usage
 
 Clone down this repo and execute the **setup.sh** script with the following input.
 
@@ -33,9 +29,9 @@ VPN Setup in progress.
 VPN Setup complete. IP address is '35.164.187.145'.
 ```
 
-# Client Setup
+## Client Setup
 
-## OSX
+### MacOS
 
 Under **Sytem Preference** / **Network** hit the **+** button to add a new connection.
 
@@ -78,7 +74,7 @@ Click on **Connect** to connect to the VPN.
 
 Ensure your traffic coming from the VPN IP via [What Is My IP](https://www.google.com/#q=what+is+my+ip).
 
-# Costs
+## Costs
 
 The only charge will be for the EC2 instance hours, currently set to t2.nano, and network bandwidth.
 
