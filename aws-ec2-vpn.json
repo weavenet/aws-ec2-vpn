@@ -3,7 +3,7 @@
   "Parameters": {
     "AvailabilityZone": {
       "Type": "AWS::EC2::AvailabilityZone::Name",
-      "Description": "The name of the availability zone for the public subnet."
+      "Description": "The Availability Zone for the public subnet."
     },
     "VpnUserName": {
       "Type": "String",
@@ -12,17 +12,38 @@
     "VpnPassword": {
       "Type": "String",
       "Description": "VPN Password",
+      "MinLength": 12,
+      "MaxLength": 32,
       "NoEcho": true
     },
     "VpnPreSharedKey": {
       "Type": "String",
       "Description": "VPN Pre Shared Key",
+      "MinLength": 12,
+      "MaxLength": 32,
       "NoEcho": true
     }
   },
   "Mappings": {
-    "AMIMap" : {
+    "AMIMap": {
       "us-west-2" : { "id" : "ami-5189a661" }
+    },
+    "Settings": {
+      "VPN": {
+        "ConnectDelay": "5000",
+        "Idle" : "1800",
+        "PrimaryDnsServer" : "8.8.8.8",
+        "SecondaryDnsServer" : "8.8.4.4"
+      }
+    },
+    "Versions": {
+      "Packages": {
+        "awscli": "1.11.22",
+        "jq": "1.3-1.1ubuntu1",
+        "openswan": "1:2.6.38-1",
+        "pythonpip": "1.5.4-1ubuntu4",
+        "xl2tpd" : "1.3.6+dfsg-1"
+      }
     }
   },
   "Resources": {
@@ -32,93 +53,53 @@
         "CidrBlock": "10.1.0.0/16",
         "EnableDnsHostnames": true,
         "EnableDnsSupport": true,
-        "Tags": [
-          {
-            "Key": "Name",
-            "Value": {
-              "Ref": "AWS::StackName"
-            }
-          }
-        ]
+        "Tags": [ { "Key": "Name", "Value": { "Ref": "AWS::StackName" } } ]
       }
     },
     "InternetGateway": {
       "Type": "AWS::EC2::InternetGateway",
       "DependsOn": "Vpc",
       "Properties": {
-        "Tags": [
-          {
-            "Key": "Name",
-            "Value": {
-              "Ref": "AWS::StackName"
-            }
-          }
-        ]
+        "Tags": [ { "Key": "Name", "Value": { "Ref": "AWS::StackName" } } ]
       }
     },
     "RouteTable": {
       "Type": "AWS::EC2::RouteTable",
       "DependsOn": "Vpc",
       "Properties": {
-        "VpcId": {
-          "Ref": "Vpc"
-        },
-        "Tags": [
-          {
-            "Key": "Name",
-            "Value": {
-              "Ref": "AWS::StackName"
-            }
-          }
-        ]
+        "VpcId": { "Ref": "Vpc" },
+        "Tags": [ { "Key": "Name", "Value": { "Ref": "AWS::StackName" } } ]
       }
     },
     "Route": {
       "Type": "AWS::EC2::Route",
-      "DependsOn": ["AttachGateway", "RouteTable"],
+      "DependsOn": [ "AttachGateway", "RouteTable" ],
       "Properties": {
         "DestinationCidrBlock": "0.0.0.0/0",
-        "GatewayId": {
-          "Ref": "InternetGateway"
-        },
-        "RouteTableId": {
-          "Ref": "RouteTable"
-        }
+        "GatewayId": { "Ref": "InternetGateway" },
+        "RouteTableId": { "Ref": "RouteTable" }
       }
     },
     "AttachGateway": {
       "Type": "AWS::EC2::VPCGatewayAttachment",
       "DependsOn": "Vpc",
       "Properties": {
-        "VpcId": {
-          "Ref": "Vpc"
-        },
-        "InternetGatewayId": {
-          "Ref": "InternetGateway"
-        }
+        "VpcId": { "Ref": "Vpc" },
+        "InternetGatewayId": { "Ref": "InternetGateway" }
       }
     },
     "DhcpOptions": {
       "Type": "AWS::EC2::DHCPOptions",
       "Properties": {
-        "DomainNameServers": [
-          "AmazonProvidedDNS"
-        ]
+        "DomainNameServers": [ "AmazonProvidedDNS" ]
       }
     },
     "VPCDhcpOptionsAssociation": {
       "Type": "AWS::EC2::VPCDHCPOptionsAssociation",
-      "DependsOn": [
-        "Vpc",
-        "DhcpOptions"
-      ],
+      "DependsOn": [ "Vpc", "DhcpOptions" ],
       "Properties": {
-        "VpcId": {
-          "Ref": "Vpc"
-        },
-        "DhcpOptionsId": {
-          "Ref": "DhcpOptions"
-        }
+        "VpcId": { "Ref": "Vpc" },
+        "DhcpOptionsId": { "Ref": "DhcpOptions" }
       }
     },
     "PublicSubnet": {
@@ -126,40 +107,23 @@
       "DependsOn": "Vpc",
       "Properties": {
         "MapPublicIpOnLaunch": true,
-        "AvailabilityZone": {
-          "Ref": "AvailabilityZone"
-        },
-        "VpcId": {
-          "Ref": "Vpc"
-        },
+        "AvailabilityZone": { "Ref": "AvailabilityZone" },
+        "VpcId": { "Ref": "Vpc" },
         "CidrBlock": "10.1.1.0/24",
-        "Tags": [
-          {
-            "Key": "Name",
-            "Value": {
-              "Ref": "AWS::StackName"
-            }
-          }
-        ]
+        "Tags": [ { "Key": "Name", "Value": { "Ref": "AWS::StackName" } } ]
       }
     },
     "SubnetRouteTableAssociation": {
       "Type": "AWS::EC2::SubnetRouteTableAssociation",
       "DependsOn": "PublicSubnet",
       "Properties": {
-        "RouteTableId": {
-          "Ref": "RouteTable"
-        },
-        "SubnetId": {
-          "Ref": "PublicSubnet"
-        }
+        "RouteTableId": { "Ref": "RouteTable" },
+        "SubnetId": { "Ref": "PublicSubnet" }
       }
     },
     "EIP" : {
        "Type" : "AWS::EC2::EIP",
-       "Properties" : {
-         "Domain" : { "Ref" : "Vpc" }
-       }
+       "Properties" : { "Domain" : { "Ref" : "Vpc" } }
      },
     "IAMRole": {
       "Type": "AWS::IAM::Role",
@@ -197,31 +161,21 @@
             }
           ]
         },
-        "Roles": [
-          {
-            "Ref": "IAMRole"
-          }
-        ]
+        "Roles": [ { "Ref": "IAMRole" } ]
       }
     },
     "IAMProfile": {
       "Type": "AWS::IAM::InstanceProfile",
       "Properties": {
         "Path": "/",
-        "Roles": [
-          {
-            "Ref": "IAMRole"
-          }
-        ]
+        "Roles": [ { "Ref": "IAMRole" } ]
       }
     },
     "VpnInstancesSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
-        "GroupDescription": "Security Group for the VPN instance",
-        "VpcId": {
-          "Ref": "Vpc"
-        },
+        "GroupDescription": "Security Group for the VPN instance.",
+        "VpcId": { "Ref": "Vpc" },
         "SecurityGroupIngress": [
           {
             "IpProtocol": "tcp",
@@ -247,42 +201,21 @@
     "VpnInstances": {
       "Type": "AWS::AutoScaling::AutoScalingGroup",
       "Properties": {
-        "VPCZoneIdentifier": [
-          {
-            "Ref": "PublicSubnet"
-          }
-        ],
-        "LaunchConfigurationName": {
-          "Ref": "VpnInstanceLaunchConfig"
-        },
+        "VPCZoneIdentifier": [ { "Ref": "PublicSubnet" } ],
+        "LaunchConfigurationName": { "Ref": "VpnInstanceLaunchConfig" },
         "DesiredCapacity": "1",
         "MinSize": "0",
         "MaxSize": "1",
-        "Tags": [
-          {
-            "Key": "Name",
-            "Value": "VPNInstance",
-            "PropagateAtLaunch": true
-          }
-        ]
+        "Tags": [ { "Key": "Name", "Value": "VPNInstance", "PropagateAtLaunch": true } ]
       }
     },
     "VpnInstanceLaunchConfig": {
       "Type": "AWS::AutoScaling::LaunchConfiguration",
       "Properties": {
-        "IamInstanceProfile": {
-          "Ref": "IAMProfile"
-        },
+        "IamInstanceProfile": { "Ref": "IAMProfile" },
         "ImageId": { "Fn::FindInMap" : [ "AMIMap", { "Ref" : "AWS::Region" }, "id"] },
         "InstanceType": "t2.nano",
-        "SecurityGroups": [
-          {
-            "Fn::GetAtt": [
-              "VpnInstancesSecurityGroup",
-              "GroupId"
-            ]
-          }
-        ],
+        "SecurityGroups": [ { "Fn::GetAtt": [ "VpnInstancesSecurityGroup", "GroupId" ] } ],
         "UserData": {
           "Fn::Base64": {
             "Fn::Join": [
@@ -291,20 +224,18 @@
                 "#!/bin/bash",
 
                 "apt-get update --fix-missing",
-                "apt-get install -q -y jq openswan python-pip xl2tpd",
+
+                { "Fn::Sub": ["apt-get install -q -y jq=${Version}", { "Version": { "Fn::FindInMap" : [ "Versions", "Packages", "jq"] }}]},
+                { "Fn::Sub": ["apt-get install -q -y openswan=${Version}", { "Version": { "Fn::FindInMap" : [ "Versions", "Packages", "openswan"] }}]},
+                { "Fn::Sub": ["apt-get install -q -y python-pip=${Version}", { "Version": { "Fn::FindInMap" : [ "Versions", "Packages", "pythonpip"] }}]},
+                { "Fn::Sub": ["apt-get install -q -y xl2tpd=${Version}", { "Version": { "Fn::FindInMap" : [ "Versions", "Packages", "xl2tpd"] }}]},
 
                 "set -e",
 
-                { "Fn::Sub": [ "ALLOCATION_ID=${AllocationId}", { "AllocationId": { "Fn::GetAtt": [ "EIP", "AllocationId" ]}}]},
-                { "Fn::Sub": [ "IPSEC_PSK=${VpnPreSharedKey}", { "VpnPreSharedKey": { "Ref": "VpnPreSharedKey" }}]}, 
-                { "Fn::Sub": [ "PUBLIC_IP=${EIP}", { "EIP": { "Ref": "EIP" }}]},
-                { "Fn::Sub": [ "VPN_USER=${VpnUserName}", { "VpnUserName": { "Ref": "VpnUserName" }}]},
-                { "Fn::Sub": [ "VPN_PASSWORD=${VpnPassword}", { "VpnPassword": { "Ref": "VpnPassword" }}]},
-                "INSTANCE_ID=`wget -q -O - 'http://169.254.169.254/latest/meta-data/instance-id'`",
-                "PRIVATE_IP=`wget -q -O - 'http://169.254.169.254/latest/meta-data/local-ipv4'`",
+                "instance_id=`wget -q -O - 'http://169.254.169.254/latest/meta-data/instance-id'`",
+                "private_ip=`wget -q -O - 'http://169.254.169.254/latest/meta-data/local-ipv4'`",
 
-                "pip install awscli",
-                "/usr/local/bin/aws configure set default.s3.signature_version s3v4",
+                { "Fn::Sub": ["pip install awscli==${Version}", { "Version": { "Fn::FindInMap" : [ "Versions", "Packages", "awscli"] }}]},
 
                 "cat > /etc/ipsec.conf <<EOF",
                 "version 2.0",
@@ -318,9 +249,9 @@
                 "  interfaces=%defaultroute",
                 "conn vpnpsk",
                 "  auto=add",
-                "  left=$PRIVATE_IP",
-                "  leftid=$PUBLIC_IP",
-                "  leftsubnet=$PRIVATE_IP/32",
+                "  left=$private_ip",
+                { "Fn::Sub": [ "  leftid=${EIP}", { "EIP": { "Ref": "EIP" }}]},
+                "  leftsubnet=$private_ip/32",
                 "  leftnexthop=%defaultroute",
                 "  leftprotoport=17/1701",
                 "  rightprotoport=17/%any",
@@ -339,7 +270,9 @@
                 "EOF",
 
                 "cat > /etc/ipsec.secrets <<EOF",
-                "$PUBLIC_IP  %any  : PSK '$IPSEC_PSK'",
+                { "Fn::Sub": [ "${EIP}  %any  : PSK '${VpnPreSharedKey}'",
+                    { "EIP": { "Ref": "EIP" },
+                      "VpnPreSharedKey": { "Ref": "VpnPreSharedKey" }}]},
                 "EOF",
 
                 "cat > /etc/xl2tpd/xl2tpd.conf <<EOF",
@@ -359,20 +292,22 @@
                 "cat > /etc/ppp/options.xl2tpd <<EOF",
                 "ipcp-accept-local",
                 "ipcp-accept-remote",
-                "ms-dns 8.8.8.8",
-                "ms-dns 8.8.4.4",
+                { "Fn::Sub": ["ms-dns ${PrimaryDnsServer}", { "PrimaryDnsServer": { "Fn::FindInMap" : [ "Settings", "VPN", "PrimaryDnsServer"] }}]},
+                { "Fn::Sub": ["ms-dns ${SecondaryDnsServer}", { "SecondaryDnsServer": { "Fn::FindInMap" : [ "Settings", "VPN", "SecondaryDnsServer"] }}]},
                 "noccp",
                 "auth",
                 "crtscts",
-                "idle 1800",
+                { "Fn::Sub": ["idle ${Idle}", { "Idle": { "Fn::FindInMap" : [ "Settings", "VPN", "Idle"] }}]},
                 "mtu 1280",
                 "mru 1280",
                 "lock",
-                "connect-delay 5000",
+                { "Fn::Sub": ["connect-delay ${ConnectDelay}", { "ConnectDelay": { "Fn::FindInMap" : [ "Settings", "VPN", "ConnectDelay"] }}]},
                 "EOF",
 
                 "cat > /etc/ppp/chap-secrets <<EOF",
-                "$VPN_USER       l2tpd   $VPN_PASSWORD   *",
+                { "Fn::Sub": [ "${VpnUserName}       l2tpd   ${VpnPassword}   *",
+                    { "VpnUserName": { "Ref": "VpnUserName" },
+                      "VpnPassword": { "Ref": "VpnPassword" }}]},
                 "EOF",
 
                 "iptables -t nat -A POSTROUTING -s 192.168.42.0/24 -o eth0 -j MASQUERADE",
@@ -386,14 +321,19 @@
 
                 "chmod a+x /etc/network/if-pre-up.d/iptablesload",
 
-                { "Fn::Sub": [ "aws ec2 associate-address --instance-id $INSTANCE_ID --allocation-id $ALLOCATION_ID --region ${Region}", { "Region": { "Ref": "AWS::Region" }}]},
+                { "Fn::Sub": [ "aws ec2 associate-address --instance-id $instance_id --allocation-id ${AllocationId} --region ${Region}",
+                    { "Region": { "Ref": "AWS::Region" },
+                      "AllocationId": { "Fn::GetAtt": [ "EIP", "AllocationId" ]}}]},
 
                 "/etc/init.d/ipsec restart",
                 "/etc/init.d/xl2tpd restart",
                 "update-rc.d ipsec defaults",
                 "update-rc.d xl2tpd defaults",
 
-                "echo { \\\"Status\\\": \\\"SUCCESS\\\", \\\"Reason\\\": \\\"complete\\\", \\\"UniqueId\\\": \\\"1234\\\", \\\"Data\\\": \\\"complete\\\" } > /root/status.json",
+                "echo { \\\"Status\\\": \\\"SUCCESS\\\",
+                        \\\"Reason\\\": \\\"complete\\\",
+                        \\\"UniqueId\\\": \\\"$instance_id\\\",
+                        \\\"Data\\\": \\\"complete\\\" } > /root/status.json",
                 { "Fn::Sub": ["curl -T /root/status.json '${WaitHandle}'", { "WaitHandle": { "Ref": "WaitHandle" } }] }
               ]
             ]
@@ -407,14 +347,9 @@
     },
     "WaitCondition": {
       "Type": "AWS::CloudFormation::WaitCondition",
-      "DependsOn": [
-        "VpnInstanceLaunchConfig",
-        "VpnInstances"
-      ],
+      "DependsOn": [ "VpnInstanceLaunchConfig", "VpnInstances" ],
       "Properties": {
-        "Handle": {
-          "Ref": "WaitHandle"
-        },
+        "Handle": { "Ref": "WaitHandle" },
         "Count": "1",
         "Timeout": "900"
       }
