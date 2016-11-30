@@ -357,9 +357,7 @@
   },
   "Outputs" : {
     "IP": {
-      "Value": {
-        "Ref": "EIP"
-      },
+      "Value": { "Ref": "EIP" },
       "Description": "Elastic IP of VPN Instance."
     }
   }
