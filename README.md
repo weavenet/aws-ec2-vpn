@@ -11,7 +11,7 @@ to create a new Cloud Formation Stack from the [aws-ec2-vpn.json](https://github
 
 ## Setup via CLI
 
-You must have the [aws-cli](https://aws.amazon.com/cli/) as well as [jq](https://stedolan.github.io/jq/) installed and available in your path.
+You must have the [aws-cli](https://aws.amazon.com/cli/) installed and available in your path.
 
 Additionally, you must set your default AWS credentials to a user with permissions to setup a VPC and launch EC2 instances.
 

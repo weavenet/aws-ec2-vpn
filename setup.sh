@@ -19,15 +19,12 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-which jq > /dev/null 2>&1
-if [ $? -ne 0 ]; then
-    echo "jq must be installed and in path."
-    exit 1
-fi
-
 set -e
 
-az=`aws ec2 describe-availability-zones --region $region |jq -r .AvailabilityZones[0].ZoneName`
+az=`aws ec2 describe-availability-zones \
+    --query 'AvailabilityZones[0].ZoneName' \
+    --output text \
+    --region $region`
 
 result=`aws cloudformation create-stack \
     --region $region \
@@ -47,7 +44,9 @@ aws cloudformation wait stack-create-complete \
     --stack-name $stack_name
 
 ip=`aws cloudformation describe-stacks \
-    --region $region \
-    --stack-name $stack_name |jq -r .Stacks[0].Outputs[0].OutputValue`
+    --stack-name $stack_name \
+    --query 'Stacks[0].Outputs[0].OutputValue' \
+    --output text \
+    --region $region`
 
 echo "VPN Setup complete. IP address is '$ip'."

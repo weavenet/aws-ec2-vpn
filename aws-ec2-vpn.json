@@ -123,7 +123,7 @@
     },
     "EIP" : {
        "Type" : "AWS::EC2::EIP",
-       "Properties" : { "Domain" : { "Ref" : "Vpc" } }
+       "Properties" : { "Domain" : "vpc" }
      },
     "IAMRole": {
       "Type": "AWS::IAM::Role",
