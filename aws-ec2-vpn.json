@@ -6,7 +6,7 @@
       "Description": "The Availability Zone for the public subnet."
     },
     "KeyName" : {
-      "Description" : "Amazon EC2 Key Nams",
+      "Description" : "Amazon EC2 Key Name",
       "Type" : "AWS::EC2::KeyPair::KeyName"
     },
     "VpnUserName": {
