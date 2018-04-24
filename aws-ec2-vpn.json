@@ -5,6 +5,10 @@
       "Type": "AWS::EC2::AvailabilityZone::Name",
       "Description": "The Availability Zone for the public subnet."
     },
+    "KeyName" : {
+      "Description" : "Amazon EC2 Key Name",
+      "Type" : "AWS::EC2::KeyPair::KeyName"
+    },
     "VpnUserName": {
       "Type": "String",
       "Description": "VPN Username"
@@ -179,6 +183,12 @@
         "SecurityGroupIngress": [
           {
             "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "IpProtocol": "tcp",
             "FromPort": "500",
             "ToPort": "500",
             "CidrIp": "0.0.0.0/0"
@@ -215,6 +225,7 @@
         "IamInstanceProfile": { "Ref": "IAMProfile" },
         "ImageId": { "Fn::FindInMap" : [ "AMIMap", { "Ref" : "AWS::Region" }, "id"] },
         "InstanceType": "t2.nano",
+        "KeyName": { "Ref": "KeyName" },
         "SecurityGroups": [ { "Fn::GetAtt": [ "VpnInstancesSecurityGroup", "GroupId" ] } ],
         "UserData": {
           "Fn::Base64": {
